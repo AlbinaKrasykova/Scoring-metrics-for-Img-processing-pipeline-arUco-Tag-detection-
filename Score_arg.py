@@ -1,15 +1,16 @@
 # importing librraies 
 
-import argparse
-import cv2 
-import numpy as np
+import argparse 
 from shadow_highlight_correction import correction
 import math
 import os
 import re
 from PIL import Image
 import pandas as pd 
-
+import imutils
+import numpy as np
+import cv2 as cv
+import cv2
 
 #GOAL 1: score function which scores ing pppln according to how well it perfomed  ✔
 
@@ -100,6 +101,7 @@ def load_images_in_batches(directory, batch_size, batch_index=0):
 
 #Info: Original id's of the images which is an array of ints  
 
+# Scoring function implented in array format ---------------------------------------------------------------------------------
 def original_id(image_dict):
     digit_array = []
     pattern = r'^\d{1,2}'
@@ -345,7 +347,7 @@ def info(score,total,ratio,precision, recall):
 cap = cv2.VideoCapture(0)
 
 
-
+#Command_Line -----------------------------------------------------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
@@ -703,76 +705,39 @@ if args.score_all_cases:
         FP = 0
         FP2=0
         scores = 0
-        intersection=0
+        intersection = 0
         total = len(original_ids)
         for set_o, set_p in zip(original_ids, predicted_ids):
           #1 value and not empty cases part-1
           #if len(set_o)==1:
             #True positive 
-            if set_o!=set():
+            if set_o != set():
                 intersection = set_o&set_p
                 TP+=len(intersection)
                 if len(intersection)>0:
-                    scores+=1
+                    scores += 1
               #false positive one {40}->{13}
-                if set_o!=set_p:
-                    if set_p!=set():
-                        FP+=1
+                if set_o != set_p:
+                    if set_p != set():
+                        FP += 1
               # false negative {20}->set
-                if set_p==set():
-                    FN+=1
+                if set_p == set():
+                    FN += 1
             #empty set_o part 2 
-            if set_o==set():
+            if set_o == set():
                #True negative case set() -> set()
-               if set_o==set_p:
-                    TN+=1
-                    scores+=1
+               if set_o == set_p:
+                    TN += 1
+                    scores += 1
                 # set() - > {17}
-               if set_o !=set_p:
-                    FP2+=1
+               if set_o != set_p:
+                    FP2 += 1
         #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total
         return TP, TN, FP, FN, FP2, scores, total   
-
-
-    def fixed_calc_p_r(original_ids, predicted_ids):
-        total_TP = 0
-        total_FP = 0
-        total_FN = 0
-        true_negative = 0
-        false_positive2 = 0
-        scores = 0
-        total = len(original_ids)
-
-        for set_o, set_p in zip(original_ids, predicted_ids):
-            if set_o != set():  # Multiple cases for TP, FN, FP
-                intersection = set_o & set_p 
-                true_positive = len(intersection)
-                false_negative = len(set_p - set_o)
-                false_positive = len(set_o) - true_positive - false_negative
-                
-
-                # Calculate score for each true positive
-                score = true_positive
-                scores += score
-
-                total_TP += true_positive
-                total_FP += false_positive
-                total_FN += false_negative
-
-            # Cases for the empty sets: TN (set() -> set()), FP#2 case (set() -> {30})
-            if set_o == set():
-                if set_o == set_p:
-                    true_negative += 1
-                    scores += 1
-                if set_o != set_p:
-                    false_positive2 += 1
-
-
-        total = len(original_ids)
-        return total_TP, total_FP, total_FN, true_negative, false_positive2, scores,total
     
     #return array with classification TP,FP,FN,TN [[0,1,0,0],[1,0,0,0]]
     #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total
+    #TO DO: recheck if it produces correct output 
     
     def class_arr(original_ids, predicted_ids):
             
@@ -825,6 +790,7 @@ if args.score_all_cases:
         
     
 
+  #Format of function info looks like - Predicted: Score:11 | TP:11, FN:4, TN:0, FP-1:135, FP-2:0 | precision:0, recall:0.0
     
     def info(TP, TN, FP, FN, FP2, scores, total):
         precision = 0
@@ -843,7 +809,6 @@ if args.score_all_cases:
         print(f'Predicted: Score:{(scores/total)*100}% | TP:{TP}, FN:{FN}, TN:{TN}, FP1:{FP}, FP2:{FP2} | precision:{precision}, recall:{recall}')
         print(f'Out of {total} images, {TP} were predicted accurately')
 
-  #Predicted: Score:11 | TP:11, FN:4, TN:0, FP-1:135, FP-2:0 | precision:0, recall:0.0
 
   # save values to a file
     import pandas as pd
@@ -934,7 +899,7 @@ if args.score_all_cases:
     
     directory = r'D:\AI research internship\opencv_scripts\n_l_r_angl'
 
-    #UNcomment for more pplns & datasets 
+    #UNcomment for more scores of Scoring function on the different pplns & datasets 
     
     '''
 
@@ -964,13 +929,10 @@ if args.score_all_cases:
     pplns(A_ppln_2)
 '''
 
-#TEST  -----------------------------------------------------------------------------------------------
+#TEST  ----------------------------------------------------------------------------------------------- FINDING DISTANCE
 
 #Test data Triangle Similarity 
 #from imutils import paths
-import numpy as np
-import imutils
-import cv2
 
 
 
@@ -978,19 +940,19 @@ import cv2
 
 def find_marker_a(img):
           
-                transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                transformation = cv2.bitwise_not(transformation)
-                clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
-                transformation = clahe.apply(transformation)
+    transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    transformation = cv2.bitwise_not(transformation)
+    clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
+    transformation = clahe.apply(transformation)
 
-                transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+    transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
 
-                transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
+    transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
 
-                _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)  # Renamed 'transformation' to 'de
-                corners,ids,_ = detector.detectMarkers(transformation)   
-                detected_markers = cv2.aruco.drawDetectedMarkers(img, corners, ids)
-                return detected_markers 
+    _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)  # Renamed 'transformation' to 'de
+    corners,ids,_ = detector.detectMarkers(transformation)   
+    detected_markers = cv2.aruco.drawDetectedMarkers(img, corners, ids)
+    return detected_markers 
 
                         
 
@@ -1000,10 +962,10 @@ def distance_to_camera(knownWidth, focalLength, perWidth):
 
 
 # initialize the known distance from the camera to the object, which
-# in this case is 24 cm
+# in this case is 11 cm
 KNOWN_DISTANCE = 11
 # initialize the known object width, which in this case, the piece of
-# paper is 12 inches wide
+# tag is 3 inches wide
 KNOWN_WIDTH = 3
 # load the furst image that contains an object that is KNOWN TO BE 2 feet
 # from our camera, then find the paper marker in the image, and initialize
@@ -1013,14 +975,10 @@ paths = r'D:\AI research internship\opencv_scripts\Triangle Similarity'
 #image = cv2.imread("images/2ft.png")
 #marker = find_marker(image)
 #focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+#Camera Caliberation 
 
 
-import cv2
-import imutils
 
-import cv2
-import numpy as np
-import imutils
 
 def find_marker(img):
     # Convert the image to grayscale, blur it, and detect edges
@@ -1040,37 +998,105 @@ def find_marker(img):
     # we'll assume that this is our piece of paper in the image
     cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
+    # Find the contour with the maximum area
     c = max(cnts, key=cv2.contourArea)
     marker = cv2.minAreaRect(c)
 
 
-    # Find the contour with the maximum area
-    c = max(cnts, key=cv2.contourArea)
-
-   
-    # Return the bounding box of the marker
-    print('marker:', marker)
-    print('DType id', type(marker))
+    rect = cv.minAreaRect(c)
+    box = cv.boxPoints(rect)
+    box = np.int0(box)
+    
     return marker
 
 
+
+def isbright(image, dim=10, thresh=0.5):
+    # Resize image to 10x10
+        image = cv2.resize(image, (dim, dim))
+        # Convert color space to LAB format and extract L channel
+        L, A, B = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2LAB))
+        # Normalize L channel by dividing all pixel values with maximum pixel value
+        L = L/np.max(L)
+        value = np.mean(L) 
+        # Return True if mean is greater than thresh else False
+        if np.mean(L) > thresh:
+            return  value
+        else:
+            return   value
 	# compute the bounding box of the of the paper region and return it
 	
 
 
 
-        
-        
+# Test for a frame Distance  -------------------------------------------------------------------------------------------
+
 cap = cv2.VideoCapture(0)
 import cv2 
 
 IMAGE_PATHS = ['(1).jpeg']
-
+KNOWN_DISTANCE = 4.3
+KNOWN_WIDTH = 1.2
 
 image = cv2.imread(IMAGE_PATHS[0])
 marker = find_marker(image)
-focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+#focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+#CAMERA CALIB  -------------------------------------------------------------------------------------------------------------
+directory = "D:/AI research internship/opencv_scripts/checkboard_data"
+image_files = os.listdir(directory)
 
+# termination criteria
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+objp = np.zeros((8*6,3), np.float32)
+objp[:,:2] = np.mgrid[0:8,0:6].T.reshape(-1,2)
+
+# Arrays to store object points and image points from all the images.
+objpoints = [] # 3d point in real world space
+imgpoints = [] # 2d points in image plane.
+
+
+
+count = 0
+for image_file in image_files:
+    if image_file.endswith(".jpg") or image_file.endswith(".png"):
+        image_path = os.path.join(directory, image_file)
+        img = cv2.imread(image_path)
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Find the chess board corners
+        ret, corners = cv2.findChessboardCorners(gray, (8,6),None)
+        
+        if ret:
+            print(f"Corners found in image: {image_file}")
+            
+            objpoints.append(objp)
+            
+            corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+            imgpoints.append(corners2)
+            
+            # Visualize detected corners
+            img_with_corners = cv2.drawChessboardCorners(img, (8, 6), corners2, ret)
+            cv2.imshow("Corners", img_with_corners)
+            
+            key = cv2.waitKey(0)
+            if key == ord('q'):
+                break
+        else:
+            print(f"No corners found in image: {image_file}")
+            
+cv2.destroyAllWindows()
+
+
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+# Close all windows at the end
+cv.destroyAllWindows()
+
+#------------------------------------------------------------------------------------------------------------------------------
+#Start 
+#Track the tag, and calculate the Distance 
 
 while True:
     # Read a frame from the video stream
@@ -1086,31 +1112,31 @@ while True:
         
         
         # Calculate the distance in inches
-        inches = distance_to_camera(KNOWN_WIDTH, focalLength, marker[1][0])
+        inches = distance_to_camera(KNOWN_WIDTH, focal_lenght, marker[1][0])
+
+        #brightness
+
+         # Convert 'number' to a formatted string with one decimal place
+        formatted_number = "{:.1f}".format(inches)
+
+        bright = isbright(frame)
         
         # Draw a bounding box around the image and display it
         box = cv2.cv.BoxPoints(marker) if imutils.is_cv2() else cv2.boxPoints(marker)
         box = np.int0(box)
-        cv2.drawContours(frame, [box], -1, (0, 255, 0), 2)
+        cv2.drawContours(frame, [box], -1, (255, 255, 0), 4)
         
-    
+        text = f"Distance: {inches}"
 
             # Put the text on the right side of the frame
-        cv2.putText(frame, f'Distance:{inches}' ,
+        cv2.putText(frame, text ,
                     (200,200), cv2.FONT_HERSHEY_SIMPLEX,
-                    3, 
-                (0, 255, 255), 
-                7, 
+                    1, 
+                (255, 255, 0), 
+                4, 
                 cv2.LINE_4)
-        '''
-        cv2.putText(frame, f'"Distance:{inches}"' ,
-                    (10, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX,
-                    20, 
-                (0, 50, 255), 
-                5, 
-                cv2.LINE_4)
-        print('Inches', inches)
-'''
+
+
 
     # Display the frame (whether or not a marker is detected)
     cv2.imshow('img_check', frame)
@@ -1122,66 +1148,25 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
-#D:\AI research internship\opencv_scripts\(1).jpeg
+
+# -------------------------------------USEFULL LINKS & RESOURCES  
+#UI and distence/Angle - https://medium.com/analytics-vidhya/how-to-track-distance-and-angle-of-an-object-using-opencv-1f1966d418b4
+#Github Code: https://github.com/ariwasch/OpenCV-Distance-Angle-Demo/blob/master/Vision.py#L115
+
+#Color pale2tte - https://rgb.to/hex/ffff00 
+
+#LIDAR - https://www.thinkautonomous.ai/blog/how-lidar-detection-works/
 
 
+# 3D - reconstraction https://medium.com/vitalify-asia/create-3d-model-from-a-single-2d-image-in-pytorch-917aca00bb07
 
-''' -------------------------------------------------------------------------------------------
+#CARLA - http://carla.org/
 
-#TEST for images 
-import cv2
+#Generete 3d models using images HomeArtificial IntelligenceHow to generate 3D Models using Images | Machine Learning.
+#How to generate 3D Models using Images | Machine Learning.
 
-IMAGE_PATHS = ['(1).jpeg', '(2).jpeg', '(3).jpeg']
-KNOWN_DISTANCE = 11
-KNOWN_WIDTH = 3
+#Keywords : map image to a 3d model, onvolutional AutoEncoder vs cnn, Lidar Detection (Light detection),
+# craeat 3d model from images from cnn
 
-count = 0
-image = cv2.imread(IMAGE_PATHS[0])
-marker = find_marker(image)
-focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
-
-for img_path in IMAGE_PATHS:
-    count += 1
-
-    img = cv2.imread(img_path)
-    marker = find_marker(img)
-    marker_pix = marker[1][0]
-    print('marker',marker)
-    
-    print('focalLength: ', focalLength)
-    inches = (KNOWN_WIDTH * focalLength) / marker_pix
-    print('KNOWN_WIDTH:',KNOWN_WIDTH, 'focalLength: ', focalLength, '')
-    print('Distance : ', inches)
-
-    box = cv2.cv.BoxPoints(marker) if imutils.is_cv2() else cv2.boxPoints(marker)
-    box = np.int0(box)
-    cv2.drawContours(img, [box], -1, (0, 255, 0), 2)
-        
-    cv2.putText(img, f'"Distance:{inches}"' ,
-                    (10, img.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX,
-                    7, 
-                (0, 255, 255), 
-                5, 
-                cv2.LINE_4)
-    print('Inches', inches)
-    # Get the current width and height of the image
-    height, width = img.shape[:2]
-
-# Define the new width and height you want for the resized image
-    new_width = 600
-    new_height = 600
-
-# Resize the image to the new dimensions using cv2.resize()
-    resized_image = cv2.resize(img, (new_width, new_height))
-    cv2.imshow('img', resized_image)
-    print('img', count)
-
-    # Wait for a key press and close the window if 'q' is pressed
-    key = cv2.waitKey(0)
-    if key == ord('q'):
-        break
-
-cv2.destroyAllWindows()
-'''
-        
-       
+#Learning a Probabilistic Latent Space 
+# of Object Shapes via 3D Generative-Adversarial Modeling(3D GAN)
