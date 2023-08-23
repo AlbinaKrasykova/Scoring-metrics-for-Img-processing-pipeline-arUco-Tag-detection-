@@ -11,7 +11,8 @@ Step #3 Gathering Data for the Scoring system.
  + first attempt - I collected 30 images of arUco tags (it took me 4hr)
  + secod attempt - I collected 7K images of arUco tags, but this time I tried to capture angle: From left to right, and distance : up/down shots. (I didn't really measure an accuracy, and it was my first attempt of trying to capture a first condition, whcih would be a good start for a first detailed feedback of a scoring fucntion.)
  + third attempt - I collected 5K data and this time I manually measured an angle, distance and described the ligitng condition.
-          data_1: 'Angle: 70, Distance: 4, Lighting: low day light at 5:48 PM',
+ + Example --------------------------------------------------------------------------------------------------------------------------
+        data_1: 'Angle: 70, Distance: 4, Lighting: low day light at 5:48 PM',
         data_2 : 'Angle: 70, Distance: 10, Lighting: low day light at 7:50 PM',
         data_3: 'Angle: 28, Distance: 10, Lighting: low day light at 8:48 PM',
         data_4: 'Angle: 5, Distance: 4, Lighting: low day light at 3:58 PM',
@@ -21,4 +22,4 @@ Step #3 Gathering Data for the Scoring system.
         data_8: 'Angle: 50, Distance: 20, Lighting: bright artificial light at 9:32 PM',
         data_9 : 'Angle: 28, Distance: 20, Lighting: bright artificial light at 9:49 PM',
         data_10: 'Angle: 5, Distance: 20, Lighting: bright artificial light at 10:08 PM'
- + a better way- ? Live tracking of various conditions 
+
