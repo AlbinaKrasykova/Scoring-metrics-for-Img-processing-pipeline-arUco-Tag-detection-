@@ -8,9 +8,11 @@ import re
 from PIL import Image
 import pandas as pd 
 import imutils
-import numpy as np
 import cv2 as cv
+import variable
 import cv2
+import pickle
+import numpy as np
 
 #GOAL 1: score function which scores ing pppln according to how well it perfomed  ✔
 
@@ -58,13 +60,275 @@ dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
 parameters = cv2.aruco.DetectorParameters 
 detector = cv2.aruco.ArucoDetector(dictionary)
 
+#Functios for implenattion of the scring fucntion in array format --------------------------------------------------------------------
+#load images in image dictionary - small size datasets only (what I inittially started with)
+def load_images(directory):
+        image_dict = {}
+        for filename in os.listdir(directory):
+            if filename.endswith(".jpg") or filename.endswith(".png"):
+                image_path = os.path.join(directory, filename)
+                try:
+                    image = cv2.imread(image_path)
+                    image_dict[filename] = image
+                except OSError:
+                    print(f"Unable to open image: {filename}")
+        return image_dict
+
+import os
+import cv2
+
+
+
+#using regular expression to extratct id from images names, and add it to a string - Test data 
+def original_id(image_dict):
+    digit_array = []
+    pattern = r'^\d{1,2}'
+    
+    for key in image_dict.keys():
+        match = re.match(pattern, key)
+        if match:
+            first_digits = int(match.group())
+            digit_array.append(first_digits)
+    print(digit_array)        
+    return digit_array
+
+
+#3 CREATE an ARRAY with Tags that were predicted - ✔
+#using regular expression to extratct id from images names, and add it to a string - Test data 
+def My_ppln(image_dict):
+    p_id_arr = []
+    for ids, img in image_dict.items():
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        clache = cv2.createCLAHE(clipLimit=40)
+        frame_clache = clache.apply(gray)           
+        th3 = cv2.adaptiveThreshold(frame_clache, 125, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                    cv2.THRESH_BINARY_INV, 51, 1)
+        blurred = cv2.GaussianBlur(th3, (21, 21), 0)
+        flipped = cv2.flip(blurred, 1)
+        _, ids, _ = detector.detectMarkers(flipped)
+        p_id_arr.append(ids)
+
+    print('My array with predicted id is: ', p_id_arr)
+    return p_id_arr
+
+#1/3 A_ppln for the Array format 
+def A_ppln_2(image_dict):
+            arr = []
+            p_id_set = set()
+            for ids, img in image_dict.items():
+                img_corrected = correction(img, 0, 0, 0, 0.6, 0.6, 30, .3)
+                img_gray = cv2.cvtColor(img_corrected, cv2.COLOR_BGR2GRAY)
+                if calibration_frame is not None:
+                    img_norm = img_gray - calibration_frame
+                else:
+                    img_norm = img_gray
+
+                img_contrast_enhanced = contrast(img_norm, clahe)
+                img_blurred = blur(img_contrast_enhanced, (5, 5))
+                img_thresholded = threshold(img_blurred, THRESHOLD_PX_VAL)
+                flipped = cv2.flip(img_thresholded, 1)
+                ids = A_detect(flipped)
+                
+                p_id_set = set()
+                
+                if ids is not None:
+                    for inner_arr in ids:
+                        for i in inner_arr:
+                            p_id_set.add(i)
+                        
+                arr.append(p_id_set) 
+            return arr
+        
+# F_ppln CREATE an ARRAY with Tags that were predicted - ✔ 2/4 
+
+def F_ppln(image_dict):
+    p_id_arr = []
+    for ids, images in image_dict.items():
+        transformation = cv2.cvtColor((images), cv2.COLOR_BGR2GRAY)
+        transformation = cv2.bitwise_not(transformation)
+        clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
+        transformation = clahe.apply(transformation)
+        transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+        _, transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)
+        # flipped = cv2.flip(transformation, 1)
+        _, ids, _ = detector.detectMarkers(transformation)
+        p_id_arr.append(ids)
+
+
+        
+    
+    print('Fahads array with the predicted id is: ', p_id_arr)
+    return p_id_arr
+
+
+def calc_p_r(original_ids, predicted_ids):
+    true_positive = 0
+    false_negative = 0
+    false_positive = 0
+
+    for i in range(len(original_ids)):
+        if original_ids[i] == predicted_ids[i]:
+            true_positive += 1
+        else:
+            false_negative += 1
+
+    false_negative = len(original_ids) - true_positive
+
+    precision = 0
+    recall = 0
+
+    if true_positive + false_positive != 0:
+        precision = true_positive / (true_positive + false_positive)
+    
+    if true_positive + false_negative != 0:
+        recall = true_positive / (true_positive + false_negative)
+
+    return precision, recall
+
+
+def score(original_id, predicted_id):
+    scores = 0
+    total = len(original_id)
+    predicted_id_count = len(predicted_id)
+    print()
+    print('Total images:', total)
+    print('Predicted images:', predicted_id_count)
+
+    for id in original_id:
+        if isinstance(id, int) and id in predicted_id:
+            scores += 1
+
+    precision, recall = calc_p_r(original_id, predicted_id)
+    ratio = (scores / total) * 100
+    print('Scores:', scores)
+    return scores, total, ratio, precision, recall
+
+#7 Display ratio based on the precious scoring subfunction  - ✔
+
+#TO ADD: toal FP/TN/FN/TP - Array format
+def info(score,total,ratio,precision, recall):
+     total = total
+     score = score
+     ratio = ratio
+     precision=precision
+     recall = recall
+     print(f"Image processing pipeline scored at {int(ratio)} %")
+     print(f"Out of {total} images {score} were predicted")
+     print('Score:', ratio, '%')
+     print('precision:', precision, '%')
+     print('recall:', recall, '%')
+
+# Functions for finding distance/angle/brightness ------------------------------------------------------------------------------------------------------------
+
+KNOWN_DISTANCE = 11
+  
+KNOWN_WIDTH = 3
+
+
+def distance_to_camera(knownWidth, focalLength, perWidth):
+        # compute and return the distance from the maker to the camera
+        return (knownWidth * focalLength) / perWidth
+
+
+
+def find_marker(img):
+            # Convert the image to grayscale, blur it, and detect edges
+            transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            transformation = cv2.bitwise_not(transformation)
+            clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
+            transformation = clahe.apply(transformation)
+
+            transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+
+            transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
+
+            _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)
+            edged = cv2.Canny(transformation, 35, 125)
+
+            # Find the contours in the edged image and keep the largest one;
+            # we'll assume that this is our piece of paper in the image
+            cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = imutils.grab_contours(cnts)
+            # Find the contour with the maximum area
+            c = max(cnts, key=cv2.contourArea)
+            marker = cv2.minAreaRect(c)
+
+
+            rect = cv.minAreaRect(c)
+            box = cv.boxPoints(rect)
+            box = np.int0(box)
+            print('Marker  is', marker, type(marker))
+            return marker
+# Fads ppln finding marker , for the distance between a marker and camera 
+def find_marker_2(img):
+        transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        transformation = cv2.bitwise_not(transformation)
+        clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
+        transformation = clahe.apply(transformation)
+
+        transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+
+        transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
+
+        _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)
+        corners, ids, rejected = detector.detectMarkers(transformation) 
+        detected_markers = cv2.aruco.drawDetectedMarkers(img, corners, ids)
+        
+        # Calculate the width of the ArUco tag
+        
+        
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        winSize = (7, 7)
+        zeroZone = (1, 1)
+
+        refined_corners = []
+        for corner_set in corners:
+            refined = cv2.cornerSubPix(transformation, corner_set, winSize, zeroZone, criteria)
+            refined_corners.append(refined)
+            print('refined corner is ', refined_corners)
+
+        visualizer = cv2.cvtColor(transformation, cv2.COLOR_GRAY2BGR)
+        
+        # Calculate the width of the ArUco tag
+        # Calculate the width of the ArUco tag
+        if len(refined_corners) > 0:
+            corner_points = refined_corners[0][0]  # Extract corner points
+            width_pixels = np.linalg.norm(corner_points[0] - corner_points[2])
+        else:
+            width_pixels = 0
+
+        # Draw the detected markers on the visualizer
+        visualizer = cv2.aruco.drawDetectedMarkers(visualizer, refined_corners, ids) 
+        print('Marker for arUco is', detected_markers, type(detected_markers))
+        print('Marker for arUco width is', width_pixels, type(width_pixels))
+        
+        return  ids, corners
+
+
+
+
+def isbright(image, dim=10, thresh=0.5):
+        # Resize image to 10x10
+            image = cv2.resize(image, (dim, dim))
+            # Convert color space to LAB format and extract L channel
+            L, A, B = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2LAB))
+            # Normalize L channel by dividing all pixel values with maximum pixel value
+            L = L/np.max(L)
+            value = np.mean(L) 
+            # Return True if mean is greater than thresh else False
+            if np.mean(L) > thresh:
+                return  value
+            else:
+                return   value
+        # compute the bounding box of the of the paper region and return it
 
 #0. Function that Generates dictionary with images from the file - ✔
 # Key: 9_angle_6_.png, Value: <PIL.PngImagePlugin.PngImageFile image mode=RGB size=1920x1080 at 0x178C0FF6BF0>
 
+#------------------------------------------------------------------------------------------------------------------------------------------
 
-
-#1 Loads images in batches 
+#1 Loads images in batches Fucntion that I used to load Big datasets (Currently)
 
 def load_images_in_batches(directory, batch_size, batch_index=0):
     # os - intereacting with the operating system
@@ -102,58 +366,9 @@ def load_images_in_batches(directory, batch_size, batch_index=0):
 #Info: Original id's of the images which is an array of ints  
 
 # Scoring function implented in array format ---------------------------------------------------------------------------------
-def original_id(image_dict):
-    digit_array = []
-    pattern = r'^\d{1,2}'
-    
-    for key in image_dict.keys():
-        match = re.match(pattern, key)
-        if match:
-            first_digits = int(match.group())
-            digit_array.append(first_digits)
-    print(digit_array)        
-    return digit_array
 
 
-#3 CREATE an ARRAY with Tags that were predicted - ✔
-
-def My_ppln(image_dict):
-    p_id_arr = []
-    for ids, img in image_dict.items():
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        clache = cv2.createCLAHE(clipLimit=40)
-        frame_clache = clache.apply(gray)           
-        th3 = cv2.adaptiveThreshold(frame_clache, 125, cv2.ADAPTIVE_THRESH_MEAN_C,
-                                    cv2.THRESH_BINARY_INV, 51, 1)
-        blurred = cv2.GaussianBlur(th3, (21, 21), 0)
-        flipped = cv2.flip(blurred, 1)
-        _, ids, _ = detector.detectMarkers(flipped)
-        p_id_arr.append(ids)
-
-    print('My array with predicted id is: ', p_id_arr)
-    return p_id_arr
-
-# F_ppln CREATE an ARRAY with Tags that were predicted - ✔
-
-def F_ppln(image_dict):
-    p_id_arr = []
-    for ids, images in image_dict.items():
-        transformation = cv2.cvtColor((images), cv2.COLOR_BGR2GRAY)
-        transformation = cv2.bitwise_not(transformation)
-        clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
-        transformation = clahe.apply(transformation)
-        transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
-        _, transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)
-        # flipped = cv2.flip(transformation, 1)
-        _, ids, _ = detector.detectMarkers(transformation)
-        p_id_arr.append(ids)
-        
-    
-    print('Fahads array with the predicted id is: ', p_id_arr)
-    return p_id_arr
-
-def pplns(ppln):
+def pplns(ppln, directory):
  batch_size = 150
  for batch in load_images_in_batches(directory, batch_size):
         original_ids = original_id(batch)
@@ -278,69 +493,264 @@ def combined_2(img1, img2):
 
  return combined_image
 
-#6 Calculates the precison and recall - ✔ 
+#6 Calculates the precison and recall - ✔ Array format 
 #if original is empty set(), and predicted is empty TN++  EX:  (set() - > set()) - TN++
 #id the original is empty set(, and predicted is something else then empty FP++ EX: (set() -> {17}) - FP++ 
 #ALso if the set is one value, and th epredicted is anothe value, FP++ EX: ({23,40} -> {17}) - FP++ 
 
 
-def calc_p_r(original_ids, predicted_ids):
-    true_positive = 0
-    false_negative = 0
-    false_positive = 0
 
-    for i in range(len(original_ids)):
-        if original_ids[i] == predicted_ids[i]:
-            true_positive += 1
-        else:
-            false_negative += 1
+# Handle All the scores, including renewed datasets, and F new ppln -----------------------------------------------
 
-    false_negative = len(original_ids) - true_positive
+def load_images(directory):
+        image_dict = {}
+        for filename in os.listdir(directory):
+            if filename.endswith(".jpg") or filename.endswith(".png"):
+                image_path = os.path.join(directory, filename)
+                try:
+                    image = cv2.imread(image_path)
+                    image_dict[filename] = image
+                except OSError:
+                    print(f"Unable to open image: {filename}")
 
-    precision = 0
-    recall = 0
+        return image_dict
 
-    if true_positive + false_positive != 0:
-        precision = true_positive / (true_positive + false_positive)
+
+
+
+def clean_string(string):
+        digits = re.findall(r'\d+', string)
+        if len(digits) > 1:
+            digits = digits[:-1]  
+        cleaned_string = '_'.join(digits)
+        count = len(digits)
+        
+        return count, cleaned_string
+
+
+
+def original_id_2(image_dict):
+        arr = []
+
+        for key in image_dict.keys():
+            count, key = clean_string(key)
+            #print('Count of ids is', count, 'the key is', key)
+            pattern = r'^(\d{1,2})'  # Create the pattern based on the ID count
+
+            for _ in range(1, count):
+                pattern += r'_(\d{1,2})'
+
+            digit_set = set()
+            match = re.match(pattern, key)
+            if match:
+                for group in match.groups():
+                    digit_set.add(int(group))
+                arr.append(digit_set)
+            else:
+                print(f"Key '{key}' does not match the pattern.")
+        print('Original ids')        
+        print(arr)
+        return arr
+
+
+
+
     
-    if true_positive + false_negative != 0:
-        recall = true_positive / (true_positive + false_negative)
+def F_2_ppln(image_dict):
+            arr = []
+            p_id_set = set()
+            for ids, img in image_dict.items():
+                transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                transformation = cv2.bitwise_not(transformation)
+                clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
+                transformation = clahe.apply(transformation)
 
-    return precision, recall
+                transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+
+                transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
+
+                _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)  # Renamed 'transformation' to 'de
+                _,ids,_ = detector.detectMarkers(transformation)   
+                p_id_set = set()
+                
+                if ids is not None:
+                    for inner_arr in ids:
+                        for i in inner_arr:
+                            p_id_set.add(i)
+                        
+                arr.append(p_id_set)
+            print('F_2 predictions: ')    
+            print(arr) 
+            return arr
+
+def calc2(original_ids, predicted_ids):
+        TP = 0
+        FP = 0
+        FN = 0
+        TN = 0
+        FP = 0
+        FP2=0
+        scores = 0
+        intersection = 0
+        total = len(original_ids)
+        for set_o, set_p in zip(original_ids, predicted_ids):
+          #1 value and not empty cases part-1
+          #if len(set_o)==1:
+            #True positive 
+            if set_o != set():
+                intersection = set_o&set_p
+                TP+=len(intersection)
+                if len(intersection)>0:
+                    scores += 1
+              #false positive one {40}->{13}
+                if set_o != set_p:
+                    if set_p != set():
+                        FP += 1
+              # false negative {20}->set
+                if set_p == set():
+                    FN += 1
+            #empty set_o part 2 
+            if set_o == set():
+               #True negative case set() -> set()
+               if set_o == set_p:
+                    TN += 1
+                    scores += 1
+                # set() - > {17}
+               if set_o != set_p:
+                    FP2 += 1
+        #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total
+        return TP, TN, FP, FN, FP2, scores, total   
+    
+    #return array with classification TP,FP,FN,TN [[0,1,0,0],[1,0,0,0]]
+    #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total
+    #TO DO: recheck if it produces correct output 
+    
+def class_arr(original_ids, predicted_ids):
+            
+            true_negative = 0
+            
+
+            classification = []
 
 
-def score(original_id, predicted_id):
-    scores = 0
-    total = len(original_id)
-    predicted_id_count = len(predicted_id)
-    print()
-    print('Total images:', total)
-    print('Predicted images:', predicted_id_count)
+            for set_o, set_p in zip(original_ids, predicted_ids):
 
-    for id in original_id:
-        if isinstance(id, int) and id in predicted_id:
-            scores += 1
+                if set_o != set():  # Multiple cases for TP, FN, FP
+                    inner=[]
+                    true_negative = 0
+                    intersection = set_o & set_p
+                    true_positive = len(intersection)
+                    #true_positive append
+                    #print('true_positive', true_positive)
+                    inner.append(true_positive)
+                    false_negative = len(set_p - set_o)
+                    #false_negative
+                    #print('false_negative', false_negative)
+                    inner.append(false_negative)
 
-    precision, recall = calc_p_r(original_id, predicted_id)
-    ratio = (scores / total) * 100
-    print('Scores:', scores)
-    return scores, total, ratio, precision, recall
+                    false_positive = len(set_o) - true_positive - false_negative
+                    #print('false_positive', false_positive)
+                    #false_positive
+                    inner.append(false_positive)
+                    true_negative = 0
+                    inner.append(true_negative)
+                    #print('true_negative', true_negative)
+                    classification.append(inner)
 
-#7 Display ratio based on the precious scoring subfunction  - ✔
 
-#TO ADD: toal FP/TN/FN/TP
-def info(score,total,ratio,precision, recall):
-     total = total
-     score = score
-     ratio = ratio
-     precision=precision
-     recall = recall
-     print(f"Image processing pipeline scored at {int(ratio)} %")
-     print(f"Out of {total} images {score} were predicted")
-     print('Score:', ratio, '%')
-     print('precision:', precision, '%')
-     print('recall:', recall, '%')
+                if set_o==set():
+                    if set_o==set_p:
+                        true_negative = 1
+                        inner.append(true_negative)
+                        true_positive=0
+                        inner.append(true_positive)
+                        false_negative=0
+                        inner.append(false_negative)
+                        false_positive=0
+                        inner.append(false_positive)
 
+                    # Calculate score for each true positive
+
+
+            return classification
+        
+    
+
+  #Format of function info looks like - Predicted: Score:11 | TP:11, FN:4, TN:0, FP-1:135, FP-2:0 | precision:0, recall:0.0
+    
+def info(TP, TN, FP, FN, FP2, scores, total):
+        precision = 0
+        recall = 0
+
+        if TP + FP + FP2 != 0:
+            precision = TP / (TP + FP + FP2)
+        else:
+            precision = 0
+
+        if TP + FN != 0:
+            recall = TP / (TP + FN)
+        else:
+            recall = 0
+
+        print(f'Predicted: Score:{(scores/total)*100}% | TP:{TP}, FN:{FN}, TN:{TN}, FP1:{FP}, FP2:{FP2} | precision:{precision}, recall:{recall}')
+        print(f'Out of {total} images, {TP} were predicted accurately')
+
+
+  # save values to a file
+   
+
+#convert 2 array with sets to array with strings 
+def convert(original_ids, predicted_ids):
+        # Find the maximum set length in original_ids and predicted_ids
+        max_length = max(max(len(s) for s in original_ids), max(len(s) for s in predicted_ids))
+
+        # Fill sets with missing elements with None
+        original_ids_filled = [list(s) + [None] * (max_length - len(s)) for s in original_ids]
+        predicted_ids_filled = [list(s) + [None] * (max_length - len(s)) for s in predicted_ids]
+
+        # Convert sets to strings
+        original_ids_str = [', '.join(map(str, s)) for s in original_ids_filled]
+        predicted_ids_str = [', '.join(map(str, s)) for s in predicted_ids_filled]
+
+        # Create a DataFrame with the 'IDs', 'Predictions', and 'Batch' columns
+        return original_ids_str, predicted_ids_str
+
+
+def cvs(original_ids, predicted_ids,  batch):
+        # Create a DataFrame with the 'IDs', 'Predictions', and 'Batch' columns
+        df = pd.DataFrame(columns=['IDs', 'Predictions', 'Batch'])
+
+        # Convert empty sets to None
+        original_ids_1, predicted_ids_1  = convert(original_ids,predicted_ids)
+
+        #classification arr
+
+        classification = class_arr(original_ids,predicted_ids)
+
+        # Create DataFrame from the second function's output
+        df_classification = pd.DataFrame(classification, columns=['TP', 'FN', 'FP', 'TN'])
+
+        # Fill the DataFrame with data from original_ids and predicted_ids
+        batch_n = 1
+        for original_id, predicted_id in zip(original_ids_1, predicted_ids_1):
+            df = pd.concat([df, pd.DataFrame({'IDs': [original_id], 'Predictions': [predicted_id], 'Batch': [batch_n]})], ignore_index=True)
+            batch_n+=1
+        # Concatenate both DataFrames side by side
+        result_df = pd.concat([df, df_classification], axis=1)
+# General fucntion ppln for img in batches 
+ # TASK: add original, predicted , classification, batch_number to the dicitonary - > write dictionary to a cvs file  
+def pplns_batch(ppln, directory):
+        batch_size = 150
+        for batch in load_images_in_batches(directory, batch_size):
+            original_ids = original_id_2(batch)
+            #print(original_ids)
+            predicted_ids = ppln(batch)
+            cvs(original_ids,predicted_ids, batch)
+            #new_arr_predicted_ids = [int(x[0, 0]) if x is not None else None for x in predicted_ids]
+            #print(predicted_ids)
+            TP, TN, FP, FN, FP2, scores, total = calc2(original_ids,predicted_ids)
+            info(TP, TN, FP, FN, FP2, scores, total)
+ # ------------------------------------------------------------------------------------------
 
 
 
@@ -356,6 +766,11 @@ parser.add_argument('--Fahad_score', action='store_true')
 parser.add_argument('--Amrit_score', action='store_true')
 parser.add_argument('--score_2id', action='store_true')
 parser.add_argument('--score_all_cases', action='store_true')
+parser.add_argument('--distance', action='store_true')
+parser.add_argument('--distance_tag', action='store_true')
+parser.add_argument('--angle', action='store_true')
+parser.add_argument('--feedback_all', action='store_true')
+parser.add_argument('--empty', action='store_true')
 
 args = parser.parse_args()
 
@@ -369,23 +784,7 @@ if args.my_score:
     directory = r'D:\AI research internship\opencv_scripts\n_l_r_angl'
 
 
-    def My_ppln(image_dict):
-        p_id_arr = []
-        for ids, img in image_dict.items():
-            
-            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            clache = cv2.createCLAHE(clipLimit=40)
-            frame_clache = clache.apply(gray)           
-            th3 = cv2.adaptiveThreshold(frame_clache, 125, cv2.ADAPTIVE_THRESH_MEAN_C,
-                                        cv2.THRESH_BINARY_INV, 51, 1)
-            blurred = cv2.GaussianBlur(th3, (21, 21), 0)
-            #flipped = cv2.flip(blurred, 1)
-            _, ids, _ = detector.detectMarkers(blurred)
-            print('id dtype is ', type(ids))
-            p_id_arr.append(ids)
-
-        print('My array with predicted id is: ', p_id_arr)
-        return p_id_arr
+  
     
     
     for batch in load_images_in_batches(directory, batch_size):
@@ -444,25 +843,7 @@ if args.score_2id:
     print('score for 2 ids')
     directory  = r'D:\AI research internship\opencv_scripts\2_id'
 
-    
-
-    def load_images(directory):
-        image_dict = {}
-        for filename in os.listdir(directory):
-            if filename.endswith(".jpg") or filename.endswith(".png"):
-                image_path = os.path.join(directory, filename)
-                try:
-                    image = cv2.imread(image_path)
-                    image_dict[filename] = image
-                except OSError:
-                    print(f"Unable to open image: {filename}")
-        return image_dict
-
-
     img_dict = load_images(directory) 
-
-  
-    
 
     def original_id_2(image_dict):
         
@@ -485,13 +866,6 @@ if args.score_2id:
 
         print(arr)
         return arr
-    
-
-
-    
-    
-
-
 
     def A_ppln_2(image_dict):
         arr = []
@@ -580,116 +954,6 @@ if args.score_all_cases:
     #cleans a string, count ids, ignores the last digit(angle)
 
 
-
-    def load_images(directory):
-        image_dict = {}
-        for filename in os.listdir(directory):
-            if filename.endswith(".jpg") or filename.endswith(".png"):
-                image_path = os.path.join(directory, filename)
-                try:
-                    image = cv2.imread(image_path)
-                    image_dict[filename] = image
-                except OSError:
-                    print(f"Unable to open image: {filename}")
-
-        return image_dict
-
-
-
-
-    def clean_string(string):
-        digits = re.findall(r'\d+', string)
-        if len(digits) > 1:
-            digits = digits[:-1]  
-        cleaned_string = '_'.join(digits)
-        count = len(digits)
-        
-        return count, cleaned_string
-
-
-
-    def original_id_2(image_dict):
-        arr = []
-
-        for key in image_dict.keys():
-            count, key = clean_string(key)
-            #print('Count of ids is', count, 'the key is', key)
-            pattern = r'^(\d{1,2})'  # Create the pattern based on the ID count
-
-            for _ in range(1, count):
-                pattern += r'_(\d{1,2})'
-
-            digit_set = set()
-            match = re.match(pattern, key)
-            if match:
-                for group in match.groups():
-                    digit_set.add(int(group))
-                arr.append(digit_set)
-            else:
-                print(f"Key '{key}' does not match the pattern.")
-        print('Original ids')        
-        print(arr)
-        return arr
-
-
-
-
-    
-    def F_2_ppln(image_dict):
-            arr = []
-            p_id_set = set()
-            for ids, img in image_dict.items():
-                transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                transformation = cv2.bitwise_not(transformation)
-                clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
-                transformation = clahe.apply(transformation)
-
-                transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
-
-                transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
-
-                _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)  # Renamed 'transformation' to 'de
-                _,ids,_ = detector.detectMarkers(transformation)   
-                p_id_set = set()
-                
-                if ids is not None:
-                    for inner_arr in ids:
-                        for i in inner_arr:
-                            p_id_set.add(i)
-                        
-                arr.append(p_id_set)
-            print('F_2 predictions: ')    
-            print(arr) 
-            return arr
-
-    def A_ppln_2(image_dict):
-            arr = []
-            p_id_set = set()
-            for ids, img in image_dict.items():
-                img_corrected = correction(img, 0, 0, 0, 0.6, 0.6, 30, .3)
-                img_gray = cv2.cvtColor(img_corrected, cv2.COLOR_BGR2GRAY)
-                if calibration_frame is not None:
-                    img_norm = img_gray - calibration_frame
-                else:
-                    img_norm = img_gray
-
-                img_contrast_enhanced = contrast(img_norm, clahe)
-                img_blurred = blur(img_contrast_enhanced, (5, 5))
-                img_thresholded = threshold(img_blurred, THRESHOLD_PX_VAL)
-                flipped = cv2.flip(img_thresholded, 1)
-                ids = A_detect(flipped)
-                
-                p_id_set = set()
-                
-                if ids is not None:
-                    for inner_arr in ids:
-                        for i in inner_arr:
-                            p_id_set.add(i)
-                        
-                arr.append(p_id_set) 
-            return arr
-        
-
     #small dataset 41 img - 1id 
     directory0 = r'D:\AI research internship\opencv_scripts\data_set'
     img_dict = load_images(directory) 
@@ -697,203 +961,29 @@ if args.score_all_cases:
 
 
    # raturns values, and array with the sets of classification
-    def calc2(original_ids, predicted_ids):
-        TP = 0
-        FP = 0
-        FN = 0
-        TN = 0
-        FP = 0
-        FP2=0
-        scores = 0
-        intersection = 0
-        total = len(original_ids)
-        for set_o, set_p in zip(original_ids, predicted_ids):
-          #1 value and not empty cases part-1
-          #if len(set_o)==1:
-            #True positive 
-            if set_o != set():
-                intersection = set_o&set_p
-                TP+=len(intersection)
-                if len(intersection)>0:
-                    scores += 1
-              #false positive one {40}->{13}
-                if set_o != set_p:
-                    if set_p != set():
-                        FP += 1
-              # false negative {20}->set
-                if set_p == set():
-                    FN += 1
-            #empty set_o part 2 
-            if set_o == set():
-               #True negative case set() -> set()
-               if set_o == set_p:
-                    TN += 1
-                    scores += 1
-                # set() - > {17}
-               if set_o != set_p:
-                    FP2 += 1
-        #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total
-        return TP, TN, FP, FN, FP2, scores, total   
-    
-    #return array with classification TP,FP,FN,TN [[0,1,0,0],[1,0,0,0]]
-    #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total
-    #TO DO: recheck if it produces correct output 
-    
-    def class_arr(original_ids, predicted_ids):
-            
-            true_negative = 0
-            
-
-            classification = []
-
-
-            for set_o, set_p in zip(original_ids, predicted_ids):
-
-                if set_o != set():  # Multiple cases for TP, FN, FP
-                    inner=[]
-                    true_negative = 0
-                    intersection = set_o & set_p
-                    true_positive = len(intersection)
-                    #true_positive append
-                    #print('true_positive', true_positive)
-                    inner.append(true_positive)
-                    false_negative = len(set_p - set_o)
-                    #false_negative
-                    #print('false_negative', false_negative)
-                    inner.append(false_negative)
-
-                    false_positive = len(set_o) - true_positive - false_negative
-                    #print('false_positive', false_positive)
-                    #false_positive
-                    inner.append(false_positive)
-                    true_negative = 0
-                    inner.append(true_negative)
-                    #print('true_negative', true_negative)
-                    classification.append(inner)
-
-
-                if set_o==set():
-                    if set_o==set_p:
-                        true_negative = 1
-                        inner.append(true_negative)
-                        true_positive=0
-                        inner.append(true_positive)
-                        false_negative=0
-                        inner.append(false_negative)
-                        false_positive=0
-                        inner.append(false_positive)
-
-                    # Calculate score for each true positive
-
-
-            return classification
-        
-    
-
-  #Format of function info looks like - Predicted: Score:11 | TP:11, FN:4, TN:0, FP-1:135, FP-2:0 | precision:0, recall:0.0
-    
-    def info(TP, TN, FP, FN, FP2, scores, total):
-        precision = 0
-        recall = 0
-
-        if TP + FP + FP2 != 0:
-            precision = TP / (TP + FP + FP2)
-        else:
-            precision = 0
-
-        if TP + FN != 0:
-            recall = TP / (TP + FN)
-        else:
-            recall = 0
-
-        print(f'Predicted: Score:{(scores/total)*100}% | TP:{TP}, FN:{FN}, TN:{TN}, FP1:{FP}, FP2:{FP2} | precision:{precision}, recall:{recall}')
-        print(f'Out of {total} images, {TP} were predicted accurately')
-
-
-  # save values to a file
-    import pandas as pd
-    import os
-
-#convert 2 array with sets to array with strings 
-    def convert(original_ids, predicted_ids):
-        # Find the maximum set length in original_ids and predicted_ids
-        max_length = max(max(len(s) for s in original_ids), max(len(s) for s in predicted_ids))
-
-        # Fill sets with missing elements with None
-        original_ids_filled = [list(s) + [None] * (max_length - len(s)) for s in original_ids]
-        predicted_ids_filled = [list(s) + [None] * (max_length - len(s)) for s in predicted_ids]
-
-        # Convert sets to strings
-        original_ids_str = [', '.join(map(str, s)) for s in original_ids_filled]
-        predicted_ids_str = [', '.join(map(str, s)) for s in predicted_ids_filled]
-
-        # Create a DataFrame with the 'IDs', 'Predictions', and 'Batch' columns
-        return original_ids_str, predicted_ids_str
-
-
-    def cvs(original_ids, predicted_ids,  batch):
-        # Create a DataFrame with the 'IDs', 'Predictions', and 'Batch' columns
-        df = pd.DataFrame(columns=['IDs', 'Predictions', 'Batch'])
-
-        # Convert empty sets to None
-        original_ids_1, predicted_ids_1  = convert(original_ids,predicted_ids)
-
-        #classification arr
-
-        classification = class_arr(original_ids,predicted_ids)
-
-        # Create DataFrame from the second function's output
-        df_classification = pd.DataFrame(classification, columns=['TP', 'FN', 'FP', 'TN'])
-
-        # Fill the DataFrame with data from original_ids and predicted_ids
-        batch_n = 1
-        for original_id, predicted_id in zip(original_ids_1, predicted_ids_1):
-            df = pd.concat([df, pd.DataFrame({'IDs': [original_id], 'Predictions': [predicted_id], 'Batch': [batch_n]})], ignore_index=True)
-            batch_n+=1
-        # Concatenate both DataFrames side by side
-        result_df = pd.concat([df, df_classification], axis=1)
+  
 
         #print(result_df)
 
-        file_path = 'data999-final0.csv'
+    file_path = 'data999-final0.csv'
         #uncommednt once create new datset
         #result_df.to_csv(file_path, mode='a', index=False, header=not os.path.isfile(file_path))
         #print('Successfully saved to the file!')
 
-
-
- 
- # TASK: add original, predicted , classification, batch_number to the dicitonary - > write dictionary to a cvs file  
-    def pplns(ppln):
-        batch_size = 150
-        for batch in load_images_in_batches(directory, batch_size):
-            original_ids = original_id_2(batch)
-            #print(original_ids)
-            predicted_ids = ppln(batch)
-            cvs(original_ids,predicted_ids, batch)
-            #new_arr_predicted_ids = [int(x[0, 0]) if x is not None else None for x in predicted_ids]
-            #print(predicted_ids)
-            TP, TN, FP, FN, FP2, scores, total = calc2(original_ids,predicted_ids)
-            info(TP, TN, FP, FN, FP2, scores, total)
-
-
 #Dataset
+    # ! ! ! - I used all the fucntion with pplns function which can be used for any ppln - > Clean up the code, saves time and space *
+    #orig_set = original_id_2(img_dict)
 
-    orig_set = original_id_2(img_dict)
-
-    predict_set = F_2_ppln(img_dict)
-
-    
-    total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total = fixed_calc_p_r(orig_set, predict_set)
+    #predict_set = F_2_ppln(img_dict)
 
     
-       
+    #total_TP, total_FP, total_FN, true_negative, false_positive2, scores, total = calc2(orig_set, predict_set)
 
-    a_orig_set = [set(),{40,30},{5},{40,30},{6},{20,30},set()]
+    #a_orig_set = [set(),{40,30},{5},{40,30},{6},{20,30},set()]
 
-    a_predicted_set = [set(),{17},{5},{40,30},set(),{20},{5}]
+    #a_predicted_set = [set(),{17},{5},{40,30},set(),{20},{5}]
 
-    total_TP_a, total_FP_a, total_FN_a, true_negative_a, false_positive2_a, scores_a, total = fixed_calc_p_r(a_orig_set, a_predicted_set)
+    #total_TP_a, total_FP_a, total_FN_a, true_negative_a, false_positive2_a, scores_a, total = calc2(a_orig_set, a_predicted_set)
 
     directory1 = r'D:\AI research internship\opencv_scripts\data_set'
     
@@ -928,225 +1018,678 @@ if args.score_all_cases:
     print('---------------------------------------------------')
     pplns(A_ppln_2)
 '''
+# ----------------------- Find Distance using Camera Calib 
+if args.feedback_all:
+        data_1 =  r'D:\AI research internship\opencv_scripts\a_70_d_4'
+        data_2 =  r'D:\AI research internship\opencv_scripts\a_70_d_10'
+        data_4  = r'D:\AI research internship\opencv_scripts\a_28_d_10'
+        data_5  = r'D:\AI research internship\opencv_scripts\a_5_d_4'
+        data_6  = r'D:\AI research internship\opencv_scripts\a_50_d_10'
+        data_7  = r'D:\AI research internship\opencv_scripts\a_50_d_4'
+        data_8 = r'D:\AI research internship\opencv_scripts\a_70_d_20'
+        data_9 = r'D:\AI research internship\opencv_scripts\a_50_d_20'
+        data_10 = r'D:\AI research internship\opencv_scripts\a_28_d_20'
+        data_11 = r'D:\AI research internship\opencv_scripts\a_5_d_20'
 
-#TEST  ----------------------------------------------------------------------------------------------- FINDING DISTANCE
-
-#Test data Triangle Similarity 
-#from imutils import paths
 
 
 
+        
+        
+        # 12 - "D:\AI research internship\opencv_scripts\empty_data2"
+
+   # 12 - "D:\AI research internship\opencv_scripts\empty_data2"
+
+        name = {
+        data_1: 'a_70_d_4',
+        data_2 : 'a_70_d_10',
+        data_4: 'a_28_d_10',
+        data_5: 'a_5_d_4',
+        data_6: 'a_50_d_10',
+        data_7: 'a_50_d_4',
+        data_8: 'a_70_d_20',
+        data_9: 'a_50_d_20',
+        data_10 : 'a_28_d_20t',
+        data_11: 'a_5_d_20'
+    }
+        
+        path = {
+        data_1: 'Angle: 70, Distance: 4, Lighting: low day light',
+        data_2 : 'Angle: 70, Distance: 10, Lighting: low day light',
+        data_4: 'Angle: 28, Distance: 10, Lighting: low day light',
+        data_5: 'Angle: 5, Distance: 4, Lighting: low day light',
+        data_6: 'Angle: 50, Distance: 10, Lighting: low day light',
+        data_7: 'Angle: 50, Distance: 4, Lighting: low day light',
+        data_8: 'Angle: 70, Distance: 20, Lighting: low day light',
+        data_9: 'Angle: 50, Distance: 20, Lighting: low day light',
+        data_10 : 'Angle: 28, Distance: 20, Lighting: low day light',
+        data_11: 'Angle: 5, Distance: 20, Lighting: low day light'
+    }
 
 
-def find_marker_a(img):
-          
-    transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    transformation = cv2.bitwise_not(transformation)
-    clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
-    transformation = clahe.apply(transformation)
+     
 
-    transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+        def get_angle_distance(string):
+            split_array = string.split('_')
+            angle = split_array[1]
+            distance = split_array[3]
+            
+            return angle, distance 
+        
+        
 
-    transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
 
-    _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)  # Renamed 'transformation' to 'de
-    corners,ids,_ = detector.detectMarkers(transformation)   
-    detected_markers = cv2.aruco.drawDetectedMarkers(img, corners, ids)
-    return detected_markers 
+ 
+     
+#df_distance_angle = pd.DataFrame(classification, columns=['TP', 'FN', 'FP', 'TN'])
 
+        def cvs_all(original_ids, predicted_ids,  folder_name):
+                    # Create a DataFrame with the 'IDs', 'Predictions', and 'Batch' columns
+                    df = pd.DataFrame(columns=['IDs', 'Predictions', 'Batch'])
+
+                    # Convert empty sets to None
+                    original_ids_1, predicted_ids_1  = convert(original_ids,predicted_ids)
+
+                    #classification arr
+
+                    classification = class_arr(original_ids,predicted_ids)
+
+                    # Create DataFrame from the second function's output
+                    df_classification = pd.DataFrame(classification, columns=['TP', 'FN', 'FP', 'TN'])
+                    # Add Angle and Distance columns using the get_angle_distance function
+                    #get the name 
+                    angle, distance  = get_angle_distance(folder_name)
+                    df_classification['Angle'] = angle
+                    df_classification['Distance'] = distance 
+                    # Fill the DataFrame with data from original_ids and predicted_ids
+                    batch_n = 1
+                    for original_id, predicted_id in zip(original_ids_1, predicted_ids_1):
+                        df = pd.concat([df, pd.DataFrame({'IDs': [original_id], 'Predictions': [predicted_id], 'Batch': [batch_n]})], ignore_index=True)
+                        batch_n+=1
+                    # Concatenate both DataFrames side by side
+                    result_df = pd.concat([df, df_classification], axis=1)
+                    result_df.to_csv(f'final_dataframe_{folder_name}.csv', index=False)
+                    print('successfully SAVED')
+
+        def pplns_batch(ppln, directory, folder_name):
+                    batch_size = 150
+                    for batch in load_images_in_batches(directory, batch_size):
+                        original_ids = original_id_2(batch)
+                        #print(original_ids)
+                        predicted_ids = ppln(batch)
+                        cvs_all(original_ids,predicted_ids, folder_name)
+                        #new_arr_predicted_ids = [int(x[0, 0]) if x is not None else None for x in predicted_ids]
+                        #print(predicted_ids)
+                        TP, TN, FP, FN, FP2, scores, total = calc2(original_ids,predicted_ids)
+                        info(TP, TN, FP, FN, FP2, scores, total)
+
+        for value, key in zip(path.values(), path.keys()):
+          folder_name = name[key]  # Get the corresponding folder name from the name dictionary
+          print()
+          print(f'Folder: {folder_name}')
+          print()
+          print('Conditions:', value)
+          print()
+          pplns_batch(F_2_ppln, key, folder_name)
+            #  
+        
+        #load all the datasets #300 img each 
+        #Score them 
+        #print score 
+        #creact cvs file with the data and results for all the datsets 
+        #visualize 
+if args.distance:
+
+   
+    #  Distance  -------------------------------------------------------------------------------------------
+
+    cap = cv2.VideoCapture(0)
+     
+
+    IMAGE_PATHS = ['(1).jpeg']
+
+
+    image = cv2.imread(IMAGE_PATHS[0])
+    find_marker(image)
+
+
+    #After running the script Camera_calib.py - the focal lenght I got is: 
+    focal_length = int(772.3458251953125) 
+
+    #------------------------------------------------------------------------------------------------------------------------------
+    #Start 
+    #Track the tag, and calculate the Distance 
+
+    while True:
+        # Read a frame from the video stream
+        ret, frame = cap.read()
+
+        #frame = cv2.resize(frame, (300, 300))
+        
+        # Find the marker in the frame
+        #marker_a = find_marker_a(frame)
+        marker = find_marker(frame)
+        print('marker is:', marker)
+        
+        #Find aruco tag
+        
+        
+        if marker is not None:
+         #if marker > 0:
+            # Calculate the focal length using the known distance and width
+            
+            
+            # Calculate the distance in inches
+            inches = distance_to_camera(KNOWN_WIDTH, focal_length, marker[1][0])
+
+            #brightness
+
+            # Convert 'number' to a formatted string with one decimal place
+            formatted_number = "{:.1f}".format(inches)
+
+            bright = isbright(frame)
+            
+            # Draw a bounding box around the image and display it
+            box = cv2.cv.BoxPoints(marker) if imutils.is_cv2() else cv2.boxPoints(marker)
+            box = np.int0(box)
+            cv2.drawContours(frame, [box], -1, (255, 255, 0), 4)
+            
+            text = f"Distance: {inches}"
+
+                # Put the text on the right side of the frame
+            cv2.putText(frame, text ,
+                        (200,200), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, 
+                    (255, 255, 0), 
+                    4, 
+                    cv2.LINE_4)
+
+
+
+        # Display the frame (whether or not a marker is detected)
+        cv2.imshow('img_check', frame)
+
+        # Wait for 1000 milliseconds and check if the user pressed 'x' to exit
+        if cv2.waitKey(1) & 0xFF == ord('x'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    #Finding distabce for the tag ------------------------------------------------------------------
+if args.distance_tag:
+
+    KNOWN_DISTANCE = 11
+    KNOWN_WIDTH = 1
+
+
+                    
+
+    def find_marker_2(img):
+        transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        transformation = cv2.bitwise_not(transformation)
+        clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
+        transformation = clahe.apply(transformation)
+
+        transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
+
+        transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
+
+        _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)
+        corners, ids, rejected = detector.detectMarkers(transformation) 
+        detected_markers = cv2.aruco.drawDetectedMarkers(img, corners, ids)
+        
+        # Calculate the width of the ArUco tag
+        
+        
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        winSize = (7, 7)
+        zeroZone = (1, 1)
+
+        refined_corners = []
+        for corner_set in corners:
+            refined = cv2.cornerSubPix(transformation, corner_set, winSize, zeroZone, criteria)
+            refined_corners.append(refined)
+            print('refined corner is ', refined_corners)
+
+        visualizer = cv2.cvtColor(transformation, cv2.COLOR_GRAY2BGR)
+        
+        # Calculate the width of the ArUco tag
+        # Calculate the width of the ArUco tag
+        if len(refined_corners) > 0:
+            corner_points = refined_corners[0][0]  # Extract corner points
+            width_pixels = np.linalg.norm(corner_points[0] - corner_points[2])
+        else:
+            width_pixels = 0
+
+        # Draw the detected markers on the visualizer
+        visualizer = cv2.aruco.drawDetectedMarkers(visualizer, refined_corners, ids) 
+        print('Marker for arUco is', detected_markers, type(detected_markers))
+        print('Marker for arUco width is', width_pixels, type(width_pixels))
+        
+        return  width_pixels,refined_corners
+
+
+
+
+
+    def distance_to_camera(knownWidth, focalLength, perWidth):
+        focalLength=772
+        # compute and return the distance from the maker to the camera
+        return (knownWidth * focalLength) / perWidth
+
+
+    # initialize the known distance from the camera to the object, which
+    # in this case is 11 cm
+    KNOWN_DISTANCE = 11
+    # initialize the known object width, which in this case, the piece of
+    # tag is 3 inches wide
+    KNOWN_WIDTH = 1
+    # load the furst image that contains an object that is KNOWN TO BE 2 feet
+    # from our camera, then find the paper marker in the image, and initialize
+    # the focal length
+    #d:\AI research internship\opencv_scripts\Triangle Similarity
+    paths = r'D:\AI research internship\opencv_scripts\Triangle Similarity'
+    #image = cv2.imread("images/2ft.png")
+    #marker = find_marker(image)
+    #focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
+    #Camera Caliberation 
+        
+
+
+
+    # Test for a frame Distance  -------------------------------------------------------------------------------------------
+
+    cap = cv2.VideoCapture(0)
+
+
+
+
+    #After running the script Camera_calib.py - the focal lenght I got is: 
+    focal_length = int(772.3458251953125) 
+
+    #------------------------------------------------------------------------------------------------------------------------------
+    #Start 
+    #Track the tag, and calculate the Distance 
+
+    while True:
+        # Read a frame from the video stream
+        ret, frame = cap.read()
+
+        #frame = cv2.resize(frame, (300, 300))
+        
+        # Find the marker in the frame
+        #marker_a = find_marker_a(frame)
+        marker = find_marker_2(frame)
+        print('marker is:', marker)
+        
+        #Find aruco tag
+        
+        
+        if marker is not None:
+          if marker > 0:
+            # Calculate the focal length using the known distance and width
+            
+            
+            # Calculate the distance in inches
+            inches = distance_to_camera(KNOWN_WIDTH, focal_length, marker)
+
+            #brightness
+
+            # Convert 'number' to a formatted string with one decimal place
+            formatted_number = "{:.1f}".format(inches)
+
+            bright = isbright(frame)
+            
+            # Draw a bounding box around the image and display it
+            #box = cv2.cv.BoxPoints(marker) if imutils.is_cv2() else cv2.boxPoints(marker)
+            #box = np.int0(box)
+            #cv2.drawContours(frame, [box], -1, (255, 255, 0), 4)
+            
+            text = f"Distance: {inches}"
+
+                # Put the text on the right side of the frame
+            cv2.putText(frame, text ,
+                        (200,200), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, 
+                    (255, 255, 0), 
+                    4, 
+                    cv2.LINE_4)
+
+
+
+        # Display the frame (whether or not a marker is detected)
+        cv2.imshow('img_check', frame)
+
+        # Wait for 1000 milliseconds and check if the user pressed 'x' to exit
+        if cv2.waitKey(1) & 0xFF == ord('x'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    #Calculate ANGLE 
+if args.angle:
+        # Test for a frame Distance  -------------------------------------------------------------------------------------------
+        # Store varibles/load using pickle 
+        
+        # Given camera matrix
+        cameraMatrix = np.array([[643.38354492, 0, 949.42837887],
+                                [0, 494.5776062, 519.32249957],
+                                [0, 0, 1]])
+        #After running the script Camera_calib.py - the focal lenght I got is: 
+        focal_length = int(772.3458251953125) 
+        k1 = 2.5540818894453188
+        k2 = [[9.64358231e+02, 0.00000000e+00, 1.03788434e+03],
+            [0.00000000e+00, 9.62492456e+02, 5.88645917e+02],
+            [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]
+
+
+        p1 = [[-0.42930121,  0.24517995,  0.00135663, -0.00494753, -0.07929622]]
+
+        p2 =(([[-0.04141919],
+            [ 0.18247221],
+            [-0.15969552]]), ([[0.06351039],
+            [0.0612138 ],
+            [0.42058486]]), ([[-0.15129478],
+            [ 0.40200938],
+            [-0.25175205]]), ([[0.10285869],
+            [0.11820688],
+            [0.25206441]]), ([[0.10166514],
+            [0.13140206],
+            [0.25221427]]), ([[0.01618808],
+            [0.30460196],
+            [0.20265187]]), ([[-0.15396583],
+            [ 0.35268659],
+            [-0.00901704]]), ([[-0.23392849],
+            [-0.25501457],
+            [-3.04270686]]), ([[-0.17902949],
+            [ 0.36534875],
+            [-0.02156775]]), ([[-0.13658845],
+            [ 0.38038126],
+            [ 0.22615647]]))
+
+        k3 =  (([[-3.45712783],
+            [-2.61247496],
+            [ 6.92790337]]), ([[ 4.34460648],
+            [-4.64416185],
+            [10.10966198]]), ([[-6.84016345],
+            [-1.30877765],
+            [10.58199518]]), ([[ 2.58730669],
+            [-3.18810802],
+            [ 9.54960441]]), ([[ 3.18078314],
+            [-3.59769643],
+            [ 9.5760269 ]]), ([[ 1.02130458],
+            [-4.53430185],
+            [ 9.9197124 ]]), ([[-1.39460395],
+            [-2.73733446],
+            [ 8.62286697]]), ([[ 4.77999348],
+            [ 2.91726858],
+            [10.30500898]]), ([[-5.71337612],
+            [-1.95494632],
+            [ 9.37482064]]), ([[-0.03813453],
+            [-4.52980484],
+            [ 9.17452092]]))
+            
+            #distCoeffs = np.array([k1, k2, p1, p2, k3], dtype=np.float32)
+        k2_flat = np.array(k2).flatten()
+        p1_flat = np.array(p1).flatten()
+        p2_flat = np.array(p2).flatten()
+        k3_flat = np.array(k3).flatten()
+
+        distCoeffs = np.array([k1] + list(k2_flat) + list(p1_flat) + list(p2_flat) + list(k3_flat), dtype=np.float32)
+
+            # Define the marker length in meters
+        markerLength = 1
+
+        
+
+
+
+
+        roll_deg = 0
+        pitch_deg = 0
+        yaw_deg = 0
+
+        def pose_esitmation(frame, matrix_coefficients, distortion_coefficients):
+
+            '''
+            frame - Frame from the video stream
+            matrix_coefficients - Intrinsic matrix of the calibrated camera
+            distortion_coefficients - Distortion coefficients associated with your camera
+
+            return:-
+            frame - The frame with the axis drawn on it
+            '''
+
+
+        
+
+            ids, corners = find_marker_2(frame)
+
+                #Export values fro Camera Calib:
+
+            
+
+                # Load imgpoints and objpoints using pickle
+            with open('imgpoints.pkl', 'rb') as f:
+                    imgpoints= pickle.load(f)
+                    print('imgpoints: ', imgpoints)
+
+            with open('objpoints.pkl', 'rb') as f:
+                    objpoints = pickle.load(f)
+                    print('objpoints: ', objpoints)
+                    objpoints = np.random.random((10,3,1))
+                    imgpoints = np.random.random((10,2,1))
+                    matrix_coefficients = np.eye(3)
+
+                    distortion_coefficients = np.zeros((5,1))
+                    
+
+                    # If markers are detected
+            if len(corners) > 0:
+                        # Convert the list of arrays to a numpy array
                         
+                    #for i in range(0, len(ids)):
+                        # Estimate pose of each marker and return the values rvec and tvec---(different from those of camera coefficients)
+                        _, tvec, rvec = cv2.solvePnP(objpoints,imgpoints, matrix_coefficients,
+                                                                                distortion_coefficients)
+                        # Draw a square around the markers
+                        cv2.aruco.drawDetectedMarkers(frame, corners) 
 
-def distance_to_camera(knownWidth, focalLength, perWidth):
-	# compute and return the distance from the maker to the camera
-	return (knownWidth * focalLength) / perWidth
+                        #rvecs, tvecs, _ = cv2.aruco.solvePnP(np.array(corners), markerLength, cameraMatrix, distCoeffs)
+                        print('rvec is', rvec)
+                        rotation_matrix, _ = cv2.Rodrigues(rvec)
+                        roll = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+                        pitch = np.arctan2(-rotation_matrix[2, 0], np.sqrt(rotation_matrix[2, 1]**2 + rotation_matrix[2, 2]**2))
+                        yaw = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
 
+                        # Convert angles from radians to degrees
+                        roll_deg = np.degrees(roll)
+                        pitch_deg = np.degrees(pitch)
+                        yaw_deg = np.degrees(yaw)
 
-# initialize the known distance from the camera to the object, which
-# in this case is 11 cm
-KNOWN_DISTANCE = 11
-# initialize the known object width, which in this case, the piece of
-# tag is 3 inches wide
-KNOWN_WIDTH = 3
-# load the furst image that contains an object that is KNOWN TO BE 2 feet
-# from our camera, then find the paper marker in the image, and initialize
-# the focal length
-#d:\AI research internship\opencv_scripts\Triangle Similarity
-paths = r'D:\AI research internship\opencv_scripts\Triangle Similarity'
-#image = cv2.imread("images/2ft.png")
-#marker = find_marker(image)
-#focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
-#Camera Caliberation 
+                        text2 = f"Roll: {roll_deg}, Pitch: {pitch_deg}, Yaw: {yaw_deg}"
 
+                        frame = cv2.drawFrameAxes( frame, matrix_coefficients, distortion_coefficients, rvec, tvec, length=0.003 )
 
-
-
-def find_marker(img):
-    # Convert the image to grayscale, blur it, and detect edges
-    transformation = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    transformation = cv2.bitwise_not(transformation)
-    clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(16, 16))
-    transformation = clahe.apply(transformation)
-
-    transformation = cv2.GaussianBlur(transformation, (21, 21), 0)
-
-    transformation = cv2.adaptiveThreshold(transformation, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 37, 1)
-
-    _,transformation = cv2.threshold(transformation, 150, 255, cv2.THRESH_BINARY)
-    edged = cv2.Canny(transformation, 35, 125)
-
-    # Find the contours in the edged image and keep the largest one;
-    # we'll assume that this is our piece of paper in the image
-    cnts = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    # Find the contour with the maximum area
-    c = max(cnts, key=cv2.contourArea)
-    marker = cv2.minAreaRect(c)
-
-
-    rect = cv.minAreaRect(c)
-    box = cv.boxPoints(rect)
-    box = np.int0(box)
-    
-    return marker
+                        cv2.putText(frame, text2,
+                                    (10, 40), cv2.FONT_HERSHEY_SIMPLEX,
+                                    1,  # Font scale
+                                    (255, 255, 0),  # Text color (in BGR)
+                                    2,  # Line thickness
+                                    cv2.LINE_AA)  # Line type (anti-aliased)
+                        print('opencv version', cv2.__version__)
+                            # Draw Axis
+                        
+                        #cv2.aruco.drawAxis(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.01)  
 
 
 
-def isbright(image, dim=10, thresh=0.5):
-    # Resize image to 10x10
-        image = cv2.resize(image, (dim, dim))
-        # Convert color space to LAB format and extract L channel
-        L, A, B = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2LAB))
-        # Normalize L channel by dividing all pixel values with maximum pixel value
-        L = L/np.max(L)
-        value = np.mean(L) 
-        # Return True if mean is greater than thresh else False
-        if np.mean(L) > thresh:
-            return  value
-        else:
-            return   value
-	# compute the bounding box of the of the paper region and return it
-	
+            return frame
+
+    # Assuming you have defined KNOWN_WIDTH, focal_length, cameraMatrix, distCoeffs, and other functions
+
+        cap = cv2.VideoCapture(0)  # Open the video stream
 
 
+        while True:
+            ret, frame = cap.read()
 
-# Test for a frame Distance  -------------------------------------------------------------------------------------------
+            marker, corners= find_marker_2(frame)
+            print('OBJECT POINTS IS : ',corners)
+            print('marker is:', marker)
 
-cap = cv2.VideoCapture(0)
-import cv2 
+            output = pose_esitmation(frame, cameraMatrix, distCoeffs)
 
-IMAGE_PATHS = ['(1).jpeg']
-KNOWN_DISTANCE = 4.3
-KNOWN_WIDTH = 1.2
-
-image = cv2.imread(IMAGE_PATHS[0])
-marker = find_marker(image)
-#focalLength = (marker[1][0] * KNOWN_DISTANCE) / KNOWN_WIDTH
-#CAMERA CALIB  -------------------------------------------------------------------------------------------------------------
-directory = "D:/AI research internship/opencv_scripts/checkboard_data"
-image_files = os.listdir(directory)
-
-# termination criteria
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-objp = np.zeros((8*6,3), np.float32)
-objp[:,:2] = np.mgrid[0:8,0:6].T.reshape(-1,2)
-
-# Arrays to store object points and image points from all the images.
-objpoints = [] # 3d point in real world space
-imgpoints = [] # 2d points in image plane.
-
-
-
-count = 0
-for image_file in image_files:
-    if image_file.endswith(".jpg") or image_file.endswith(".png"):
-        image_path = os.path.join(directory, image_file)
-        img = cv2.imread(image_path)
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, (8,6),None)
-        
-        if ret:
-            print(f"Corners found in image: {image_file}")
-            
-            objpoints.append(objp)
-            
-            corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-            imgpoints.append(corners2)
-            
-            # Visualize detected corners
-            img_with_corners = cv2.drawChessboardCorners(img, (8, 6), corners2, ret)
-            cv2.imshow("Corners", img_with_corners)
-            
-            key = cv2.waitKey(0)
-            if key == ord('q'):
+            cv2.imshow('Estimated Pose', output)
+                
+            # Wait for 1 millisecond and check if the user pressed 'x' to exit
+            if cv2.waitKey(1) & 0xFF == ord('x'):
                 break
-        else:
-            print(f"No corners found in image: {image_file}")
-            
-cv2.destroyAllWindows()
+
+        cap.release()
+        cv2.destroyAllWindows()
+# -----------------------------------------------------------------------------------------------------
+if args.empty:
+
+    #if string contains empty add set to an array 
+    empty_dir = r'D:\AI research internship\opencv_scripts\empty_data2'
+    #img_dict = load_images(path)
+  
+    def original_id_empty(image_dict):
+        arr = []
+        for key in image_dict.keys():
+            if 'empty' in key:
+                empty_set = set()
+                arr.append(empty_set)
+        print(arr)
+        return arr
+
+    #original_id_empty(img_dict)
+    def info_empty_TN(TP, TN, FP, FN, FP2, scores, total):
+            precision = 0
+            recall = 0
+
+            if TP + FP + FP2 != 0:
+                precision = TP / (TP + FP + FP2)
+            else:
+                precision = 0
+
+            if TP + FN != 0:
+                recall = TP / (TP + FN)
+            else:
+                recall = 0
+
+            print(f'Predicted: Score:{(scores/total)*100}% | TP:{TP}, FN:{FN}, TN:{TN}, FP1:{FP}, FP2:{FP2} | precision:{precision}, recall:{recall}')
+            print(f'Out of {total} images, {TN} were predicted accurately')
+
+    def pplns_batch_empty(ppln, directory):
+            batch_size = 150
+            for batch in load_images_in_batches(directory, batch_size):
+                original_ids = original_id_empty(batch)
+                #print(original_ids)
+                predicted_ids = ppln(batch)
+                #cvs(original_ids,predicted_ids, batch)
+                #new_arr_predicted_ids = [int(x[0, 0]) if x is not None else None for x in predicted_ids]
+                #print(predicted_ids)
+                TP, TN, FP, FN, FP2, scores, total = calc2(original_ids,predicted_ids)
+                info_empty_TN(TP, TN, FP, FN, FP2, scores, total)
+
+    pplns_batch_empty(F_2_ppln, empty_dir)
+
+#Test adding features as angle and distance 
+string = 'a_5_d_20'
+def get_angle_distance(string):
+    result_dict = {}
+    
+    parts = string.split('_')
+    for i in range(len(parts) - 1):
+        if parts[i] == 'a':
+            result_dict['Angle'] = int(parts[i + 1])
+        elif parts[i] == 'd':
+            result_dict['Distance'] = int(parts[i + 1])
+    
+    return result_dict
 
 
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
-# Close all windows at the end
-cv.destroyAllWindows()
+ 
+     
+#df_distance_angle = pd.DataFrame(classification, columns=['TP', 'FN', 'FP', 'TN'])
 
-#------------------------------------------------------------------------------------------------------------------------------
-#Start 
-#Track the tag, and calculate the Distance 
+def cvs(original_ids, predicted_ids,  batch):
+        # Create a DataFrame with the 'IDs', 'Predictions', and 'Batch' columns
+        df = pd.DataFrame(columns=['IDs', 'Predictions', 'Batch'])
+
+        # Convert empty sets to None
+        original_ids_1, predicted_ids_1  = convert(original_ids,predicted_ids)
+
+        #classification arr
+
+        classification = class_arr(original_ids,predicted_ids)
+
+        # Create DataFrame from the second function's output
+        df_classification = pd.DataFrame(classification, columns=['TP', 'FN', 'FP', 'TN'])
+        # Add Angle and Distance columns using the get_angle_distance function
+        df_classification['Angle'] = get_angle_distance('a_5_d_20')['Angle']
+        df_classification['Distance'] = get_angle_distance('a_5_d_20')['Distance']
+        # Fill the DataFrame with data from original_ids and predicted_ids
+        batch_n = 1
+        for original_id, predicted_id in zip(original_ids_1, predicted_ids_1):
+            df = pd.concat([df, pd.DataFrame({'IDs': [original_id], 'Predictions': [predicted_id], 'Batch': [batch_n]})], ignore_index=True)
+            batch_n+=1
+        # Concatenate both DataFrames side by side
+        result_df = pd.concat([df, df_classification], axis=1)
+        result_df.to_csv('final_dataframe.csv', index=False)
+
+# if a angle:, next value put to the key, if d - distance: , next value put to the key 
+# and add do cvs file as separate 2 columns 
+'''
+#Test running F ppln 
+cap = cv2.VideoCapture(0)  # Open the video stream
+
 
 while True:
-    # Read a frame from the video stream
     ret, frame = cap.read()
 
-    #frame = cv2.resize(frame, (300, 300))
-    
-    # Find the marker in the frame
-    marker = find_marker(frame)
-    
-    if marker is not None:
-        # Calculate the focal length using the known distance and width
+    marker, corners= find_marker_2(frame)
+    print('OBJECT POINTS IS : ',corners)
+    print('marker is:', marker)
+
+    output = pose_esitmation(frame, cameraMatrix, distCoeffs)
+
+    cv2.imshow('Estimated Pose', output)
         
-        
-        # Calculate the distance in inches
-        inches = distance_to_camera(KNOWN_WIDTH, focal_lenght, marker[1][0])
-
-        #brightness
-
-         # Convert 'number' to a formatted string with one decimal place
-        formatted_number = "{:.1f}".format(inches)
-
-        bright = isbright(frame)
-        
-        # Draw a bounding box around the image and display it
-        box = cv2.cv.BoxPoints(marker) if imutils.is_cv2() else cv2.boxPoints(marker)
-        box = np.int0(box)
-        cv2.drawContours(frame, [box], -1, (255, 255, 0), 4)
-        
-        text = f"Distance: {inches}"
-
-            # Put the text on the right side of the frame
-        cv2.putText(frame, text ,
-                    (200,200), cv2.FONT_HERSHEY_SIMPLEX,
-                    1, 
-                (255, 255, 0), 
-                4, 
-                cv2.LINE_4)
-
-
-
-    # Display the frame (whether or not a marker is detected)
-    cv2.imshow('img_check', frame)
-
-    # Wait for 1000 milliseconds and check if the user pressed 'x' to exit
+    # Wait for 1 millisecond and check if the user pressed 'x' to exit
     if cv2.waitKey(1) & 0xFF == ord('x'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
+'''
+
+
+#----------------Calculate Angle ---------------------------------------------------------------------------------------
+ # Calculates angle based off the difference between theoretical width and
+    # actual width
+#Camera Calib + saving pictures witht the patterns 
+#Reference : https://longervision.github.io/2017/03/16/ComputerVision/OpenCV/opencv-internal-calibration-chessboard/
+
+
+
+
+# corners is a list of arrays, where each array contains the corner points of a detected marker
+# You need to populate corners based on your marker detection result
+  # Fill in the detected corner points
+
+# Call the estimatePoseSingleMarkers function
+
+  
+#https://docs.opencv.org/4.x/d9/d6a/group__aruco.html
+
+
+
+
 
 
 # -------------------------------------USEFULL LINKS & RESOURCES  
@@ -1170,3 +1713,4 @@ cv2.destroyAllWindows()
 
 #Learning a Probabilistic Latent Space 
 # of Object Shapes via 3D Generative-Adversarial Modeling(3D GAN)
+#Possibly collect data from sensors 
