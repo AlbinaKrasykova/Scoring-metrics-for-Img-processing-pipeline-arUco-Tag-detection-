@@ -1,16 +1,42 @@
 **Scoring Metrics for Image Processing Pipeline: arUco Tag Detection**
+
 ![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/assets/91033995/5f1421e4-863f-4e5f-b3e3-5f454d4428f0)
 
-Developing scoring metrics for the image processing pipeline.
 
-**Step 0:** **What is the project about?** Gain an understanding of what it is, how it works, and its goal.
+API 
 
-**Step 1:** **Identifying what I want to work on** - Focus on the Computer Vision part of the project. I am building an image processing pipeline that detects arUco tags. This is important because it maps detected IDs of a physical piece of hardware to a digital version (CAD model).
+Step 1
+```
+import math
+import os
+import re
+import cv2
 
-**Step 2:** **Working on scoring metrics**, which help optimize the image processing pipeline performance.
+dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
+parameters = cv2.aruco.DetectorParameters 
+detector = cv2.aruco.ArucoDetector(dictionary)
+```
 
-**Step 3:** **Gathering Data for the Scoring System.**
-- **First attempt:** I collected 30 images of arUco tags (it took me 4 hours).
-- **Second attempt:** I collected 7,000 images of arUco tags, but this time I tried to capture different angles: from left to right, and distances: up/down shots. (I didn't measure accuracy, and it was my first attempt to capture a condition that would be a good start for detailed feedback on a scoring function.)
-- **Third attempt:** I collected 5,000 data points, and this time I manually measured angles, distances, and described the lighting conditions (10 various scenarios).
-- **Example:** data_1: 'Angle: 70, Distance: 4, Lighting: Low daylight at 5:48 PM',
+Step 2
+```
+data_1 =  r'D:\AI research internship\opencv_scripts\a_70_d_4'
+data_2 =  r'D:\AI research internship\opencv_scripts\a_70_d_10'
+data_4  = r'D:\AI research internship\opencv_scripts\a_28_d_10'
+data_5  = r'D:\AI research internship\opencv_scripts\a_5_d_4'
+data_6  = r'D:\AI research internship\opencv_scripts\a_50_d_10'
+data_7  = r'D:\AI research internship\opencv_scripts\a_50_d_4'
+data_8 = r'D:\AI research internship\opencv_scripts\a_70_d_20'
+data_9 = r'D:\AI research internship\opencv_scripts\a_50_d_20'
+data_10 = r'D:\AI research internship\opencv_scripts\a_28_d_20'
+data_11 = r'D:\AI research internship\opencv_scripts\a_5_d_20'
+```
+
+Tips (from what have I learned):
+
+1. Break down the problem in simple steps
+2. Find the simplest possible solution
+3. Whether you debug an application or try to build a solution . Start SIMPLE !()
+Example:
+4. Load the data in batches - it allows us to process data quickly.
+5. Try to keep code organized from the beginning, document buggs, challenges, solutions.
+6. Upload updated code, and metadata to the github. 
