@@ -15,7 +15,7 @@ API --------------------------------------------------------------
 
 #Output: printed score, and saved cvs files with the data 
 
-# 1- 
+# 1 
 define variables with the path (depands on have many folders with the metadata you have)
 
 ```
@@ -26,7 +26,8 @@ data_3 = r'D:\AI research internship\opencv_scripts\a_70_d_10'
         
 ```
 
-# 2 defined dicitonary 'name' with the name of variables from the # 1 
+# 2 
+defined dicitonary 'name' with the name of variables from the # 1 
 ```
 name = {
     data_1: 'a_5_d_20',
@@ -35,7 +36,8 @@ name = {
 }
 ```
 
-# 3 define dictionary with the description of each folder with the metadata 
+# 3 
+define dictionary with the description of each folder with the metadata 
 ```
 path = {
     data_1: 'Angle: 5, Distance: 20, Lighting: Bright',
@@ -45,7 +47,8 @@ path = {
 
 
 ```
-# 4 Define the pipelien transformation(see the example).  
+# 4
+Define the pipelien transformation(see the example).  
 
 ```
 def ppln_transformations(ids,img):
@@ -64,7 +67,8 @@ def ppln_transformations(ids,img):
 
 
 
-# 4 Call the function score and pass parameters:   path (dtype: dictionary), name(dtype: dictionary) 
+# 4 
+Call the function score and pass parameters:   path (dtype: dictionary), name(dtype: dictionary) 
 
 ```
 score(path, name, ppln_transformations)
