@@ -1,4 +1,4 @@
-# **Scoring Metrics for Image Processing Pipeline: arUco Tag Detection**
+ **Scoring Metrics for Image Processing Pipeline: arUco Tag Detection**
 
 
 
