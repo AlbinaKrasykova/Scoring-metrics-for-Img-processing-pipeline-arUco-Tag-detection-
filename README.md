@@ -15,7 +15,9 @@ API --------------------------------------------------------------
 
 #Output: printed score, and saved cvs files with the data 
 
-# 1- define variables with the path (depands on have many folders with the metadata you have)
+# 1- 
+define variables with the path (depands on have many folders with the metadata you have)
+
 ```
 
 data_1 =  r'D:\AI research internship\opencv_scripts\a_5_d_20'
