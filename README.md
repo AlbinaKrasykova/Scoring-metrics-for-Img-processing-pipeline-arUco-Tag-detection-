@@ -1,5 +1,10 @@
                                                 #  **Scoring Metrics for Image Processing Pipeline: arUco Tag Detection**
 
+  1. API explained
+  2. Collecting and labeling the metadata
+  3. EDA
+  4. What I learned summary 
+
 
 
 ![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/assets/91033995/5f1421e4-863f-4e5f-b3e3-5f454d4428f0)
