@@ -1,4 +1,6 @@
-##**Scoring Metrics for Image Processing Pipeline: arUco Tag Detection**
+# **Scoring Metrics for Image Processing Pipeline: arUco Tag Detection**
+
+
 
 ![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/assets/91033995/5f1421e4-863f-4e5f-b3e3-5f454d4428f0)
 
