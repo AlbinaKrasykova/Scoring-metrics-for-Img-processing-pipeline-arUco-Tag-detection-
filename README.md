@@ -16,13 +16,13 @@ API --------------------------------------------------------------
 
 
 
-# Simple Implementation 
+# API & Detailed explanation  
 
-# All you need is
+
 
 
 # 1 
-define variables with the path (depands on have many folders with the metadata you have)
+define variables with the path (depends on have many folders with the metadata you have)
 
 ```
 
