@@ -20,7 +20,6 @@ API --------------------------------------------------------------
 
 # All you need is
 
-#Output: printed score, and saved cvs files with the data 
 
 # 1 
 define variables with the path (depands on have many folders with the metadata you have)
@@ -81,6 +80,10 @@ Call the function score and pass parameters:   path (dtype: dictionary), name(dt
 score(path, name, ppln_transformations)
 
 ```
+# 5
+
+Output: printed score, and saved cvs files with the data 
+
 
 Tips (from what have I learned):
 
