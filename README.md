@@ -87,6 +87,7 @@ score(path, name, ppln_transformations)
 
 Output: printed score, and saved cvs files with the data 
 
+![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/blob/main/score.png)
 
 Tips (from what have I learned):
 
