@@ -19,10 +19,12 @@ API --------------------------------------------------------------
 # API & Detailed explanation  
 
 
+#0 Download the folders with the metadata from the repo.
+This reposatory has 3 folders. Each folder represents a condition. For example folder - 'a_5_d_20_B' stands for (a)aangle: 5, (d)distance: 20, (b) - bright 700Lux lighting.  
 
 
 # 1 
-define variables with the path (depends on have many folders with the metadata you have)
+define variables, string format  with the path of the folder. Where data_1 variable refers to a folder with a condition. 
 
 ```
 
@@ -33,7 +35,7 @@ data_3 = r'D:\AI research internship\opencv_scripts\a_70_d_10'
 ```
 
 # 2 
-defined dicitonary 'name' with the name of variables from the # 1 
+defined dicitonary, let's call it - 'name' with the name of the folders(that contains metadata) from the  step # 1 
 ```
 name = {
     data_1: 'a_5_d_20',
@@ -43,7 +45,7 @@ name = {
 ```
 
 # 3 
-define dictionary with the description of each folder with the metadata 
+define dictionary with the description of each folder. Exampe: key - data_1(initialize the folder with the metadata_1), value contains a string with a description of a condition. 
 ```
 path = {
     data_1: 'Angle: 5, Distance: 20, Lighting: Bright',
@@ -54,7 +56,7 @@ path = {
 
 ```
 # 4
-Define the pipelien transformation(see the example).  
+Define the function with the image processing pipeline, that contains image preprocessing steps and detecting returning ids only .  
 
 ```
 def ppln_transformations(ids,img):
@@ -74,7 +76,7 @@ def ppln_transformations(ids,img):
 
 
 # 4 
-Call the function score and pass parameters:   path (dtype: dictionary), name(dtype: dictionary) 
+Finally call the function score and pass the parameters: from the step #3 -  path (dtype: dictionary), from the step #2 name (dtype: dictionary) 
 
 ```
 score(path, name, ppln_transformations)
