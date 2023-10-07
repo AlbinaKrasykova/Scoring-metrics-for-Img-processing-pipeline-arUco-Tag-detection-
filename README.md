@@ -7,7 +7,7 @@
 
 
 
-![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/assets/91033995/5f1421e4-863f-4e5f-b3e3-5f454d4428f0)
+![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/blob/main/image%20(3).png)
 
 
 API --------------------------------------------------------------
@@ -22,6 +22,7 @@ API --------------------------------------------------------------
 #0 Download the folders with the metadata from the repo.
 This reposatory has 3 folders. Each folder represents a condition. For example folder - 'a_5_d_20_B' stands for (a)aangle: 5, (d)distance: 20, (b) - bright 700Lux lighting.  
 
+![image](https://github.com/AlbinaKrasykova/Scoring-metrics-for-Img-processing-pipeline-arUco-Tag-detection-/blob/main/image%20(5).png)
 
 # 1 
 define variables, string format  with the path of the folder. Where data_1 variable refers to a folder with a condition. 
